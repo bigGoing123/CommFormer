@@ -9,3 +9,8 @@ register(
     id='TrafficJunction-v0',
     entry_point='ic3net_envs.traffic_junction_env:TrafficJunctionEnv',
 )
+
+register(
+    id='CooperativeNavigation-v0',
+    entry_point='ic3net_envs.cooperative_navigation:CN_Env',
+)

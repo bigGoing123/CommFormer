@@ -76,17 +76,24 @@ class PPRunner(Runner):
                                 total_num_steps,
                                 self.num_env_steps,
                                 int(total_num_steps / (end - start))))
-
+                # env_infos = {}
+                # for agent_id in range(self.num_agents):
+                #     idv_rews = []
+                #     for info in infos:
+                #         if 'individual_reward' in info[agent_id].keys():
+                #             idv_rews.append(info[agent_id]['individual_reward'])
+                #     agent_k = 'agent%i/individual_rewards' % agent_id
+                #     env_infos[agent_k] = idv_rews
 
                 train_infos["average_episode_rewards"] = np.mean(self.buffer.rewards) * self.episode_length
                 print("average episode rewards is {}".format(train_infos["average_episode_rewards"]))
                 self.log_train(train_infos, total_num_steps)
-
-                edges = _t2n(self.trainer.policy.transformer.edges)
-                print(edges)
-                edges = _t2n(self.trainer.policy.transformer.edge_return(exact=True))
-                image = torch.from_numpy(edges).unsqueeze(0).unsqueeze(0)
-                self.writter.add_image('Matrix', image, dataformats='NCHW', global_step=total_num_steps)
+                # edges = _t2n(self.trainer.policy.transformer.edges)
+                # print(edges)
+                # edges = _t2n(self.trainer.policy.transformer.edge_return(exact=True))
+                # image = torch.from_numpy(edges).unsqueeze(0).unsqueeze(0)
+                # self.writter.add_image('Matrix', image, dataformats='NCHW', global_step=total_num_steps)
+                # self.log_env(env_infos,total_num_steps)
 
             # eval
             if episode % self.eval_interval == 0 and self.use_eval:
@@ -95,7 +102,6 @@ class PPRunner(Runner):
     def warmup(self):
         # reset env
         obs = self.envs.reset()
-
         # replay buffer
         if self.use_centralized_V:
             share_obs = obs.reshape(self.n_rollout_threads, -1)

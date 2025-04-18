@@ -47,7 +47,7 @@ class TransformerPolicy:
         self.tpdv = dict(dtype=torch.float32, device=device)
 
         
-        if self.algorithm_name in ["commformer", "commformer_dec"]:
+        if self.algorithm_name in ["commformer", "commformer_dec","mat"]:
             from commformer.algorithms.mat.algorithm.cformer import CommFormer as MAT
         else:
             raise NotImplementedError

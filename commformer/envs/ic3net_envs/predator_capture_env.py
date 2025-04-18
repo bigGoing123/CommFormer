@@ -1,20 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-"""
-Simulate a predator prey environment.
-Each agent can just observe itself (it's own identity) i.e. s_j = j and vision squares around it.
 
-Design Decisions:
-    - Memory cheaper than time (compute)
-    - Using Vocab for class of box:
-         -1 out of bound,
-         indexing for predator agent (from 2?)
-         ??? for prey agent (1 for fixed case, for now)
-    - Action Space & Observation Space are according to an agent
-    - Rewards -0.05 at each time step till the time
-    - Episode never ends
-    - Obs. State: Vocab of 1-hot < predator, preys & units >
-"""
 
 # core modules
 import copy
@@ -52,47 +36,8 @@ class PredatorCaptureEnv(gym.Env):
         self.multi_agent_init(self.args)
 
 
-    # def init_curses(self):
-    #     self.stdscr = curses.initscr()
-    #     curses.start_color()
-    #     curses.use_default_colors()
-    #     curses.init_pair(1, curses.COLOR_RED, -1)
-    #     curses.init_pair(2, curses.COLOR_YELLOW, -1)
-    #     curses.init_pair(3, curses.COLOR_CYAN, -1)
-    #     curses.init_pair(4, curses.COLOR_GREEN, -1)
-    #     curses.init_pair(5, curses.COLOR_WHITE, -1)
-    #     curses.init_pair(6, curses.COLOR_BLUE, -1)
-
-    # def init_args(self, parser):
-    #     env = parser.add_argument_group('Prey Predator task')
-    #     env.add_argument('--nenemies', type=int, default=1,
-    #                      help="Total number of preys in play")
-    #     env.add_argument('--dim', type=int, default=5,
-    #                      help="Dimension of box")
-    #     env.add_argument('--vision', type=int, default=2,
-    #                      help="Vision of predator")
-    #     env.add_argument('--moving_prey', action="store_true", default=False,
-    #                      help="Whether prey is fixed or moving")
-    #     env.add_argument('--no_stay', action="store_true", default=False,
-    #                      help="Whether predators have an action to stay in place")
-    #     parser.add_argument('--mode', default='mixed', type=str,
-    #                     help='cooperative|competitive|mixed (default: mixed)')
-    #     env.add_argument('--enemy_comm', action="store_true", default=False,
-    #                      help="Whether prey can communicate.")
-    #     env.add_argument('--nfriendly_P', type=int, default=2,
-    #                         help="Total number of friendly perception agents in play")
-    #     env.add_argument('--nfriendly_A', type=int, default=1,
-    #                         help="Total number of friendly action agents in play")
-    #     env.add_argument('--tensor_obs', action="store_true", default=False,
-    #                      help="Do you want a tensor observation")
-    #     env.add_argument('--second_reward_scheme', action="store_true", default=False,
-    #                      help="Do you want a partial reward for capturing and partial for getting to it?")
-    #     env.add_argument('--A_vision', type=int, default=-1,
-    #                         help="Vision of A agents. If -1, defaults to blind")
-
     def multi_agent_init(self, args):
 
-        # General variables defining the environment : CONFIG
         params = ['dim', 'vision', 'moving_prey', 'mode', 'enemy_comm', 'nfriendly_P', 'nfriendly_A', 'tensor_obs']
         for key in params:
             setattr(self, key, getattr(args, key))
@@ -107,8 +52,6 @@ class PredatorCaptureEnv(gym.Env):
         self.tensor_obs = args.tensor_obs
         self.second_reward_scheme = args.second_reward_scheme
         if args.A_vision != -1:
-            # if args.A_vision != 0:
-            #     raise NotImplementedError
             self.A_agents_have_vision = True
             self.A_vision = args.A_vision
             self.action_blind = False
@@ -120,10 +63,7 @@ class PredatorCaptureEnv(gym.Env):
 
         if args.moving_prey:
             raise NotImplementedError
-            # TODO
 
-        # (0: UP, 1: RIGHT, 2: DOWN, 3: LEFT, 4: STAY)
-        # Define what an agent can do -
         if self.stay:
             self.naction = 6
         else:
@@ -136,28 +76,10 @@ class PredatorCaptureEnv(gym.Env):
         self.PREDATOR_CAPTURE_CLASS += self.BASE
         self.state_len = (self.nfriendly_P + self.nfriendly_A + 1) # Change this if you change state_len in main_copy.py
 
-        # self.vocab_size = self.BASE + self.state_len
-        # 4 is 4 types of classes!
         self.num_classes = 4
         self.vocab_size = self.BASE + self.num_classes
 
-        # Observation for each agent will be vision * vision ndarray
-        # if self.tensor_obs:
-        #     self.observation_space = spaces.Box(-np.inf, np.inf, shape=[self.dim, self.dim, 4])
-        #     if self.vision == 0:
-        #         self.feature_map = [np.zeros((1, 1, 3)), np.zeros((self.dim, self.dim, 1))]
-        #     elif self.vision == 1:
-        #         self.feature_map = [np.zeros((3, 3, 3)), np.zeros((self.dim, self.dim, 1))]
-        #     else:
-        #         assert "vision of 2 unsupported"
 
-        #     self.true_feature_map = np.zeros((self.dim, self.dim, 3 + self.nfriendly_P + self.nfriendly_A))
-
-        # else:
-        #     self.observation_space = spaces.Box(low=0, high=1, shape=(self.vocab_size, (2 * self.vision) + 1, (2 * self.vision) + 1), dtype=int)
-        # Actual observation will be of the shape 1 * npredator * (2v+1) * (2v+1) * vocab_size
-
-        # self.action_space = spaces.MultiDiscrete([self.naction])
         self.action_space = []
         self.observation_space = []
         self.share_observation_space = []
@@ -179,21 +101,6 @@ class PredatorCaptureEnv(gym.Env):
         return
 
     def step(self, action):
-        """
-        The agents take a step in the environment.
-
-        Parameters
-        ----------
-        action : list/ndarray of length m, containing the indexes of what lever each 'm' chosen agents pulled.
-
-        Returns
-        -------
-        obs, reward, episode_over, info : tuple
-            obs (object) :
-            reward (float) : Ratio of Number of discrete levers pulled to total number of levers.
-            episode_over (bool) : Will be true as episode length is 1
-            info (dict) : diagnostic information useful for debugging.
-        """
         # self.start_time = time.time()
         if self.episode_over:
             raise RuntimeError("Episode is done")
@@ -221,13 +128,6 @@ class PredatorCaptureEnv(gym.Env):
         return self.obs, self._get_reward(), [self.episode_over for _ in range(self.n_agents)], [debug for _ in range(self.n_agents)]
 
     def reset(self):
-        """
-        Reset the state of the environment and returns an initial observation.
-
-        Returns
-        -------
-        observation (object): the initial observation of the space.
-        """
         self.start_time = time.time()
         self.episode_over = False
         self.reached_prey = np.zeros(self.npredator + self.npredator_capture)
@@ -239,9 +139,6 @@ class PredatorCaptureEnv(gym.Env):
         self.predator_capture_loc = locs[self.predator_capture_index:self.captured_prey_index]
         self.prey_loc = locs[self.captured_prey_index:]
 
-        # TODO: check vocab size, may be incorrect
-        # Test
-        # self.predator_loc[0] = self.predator_loc[1]
         self._set_grid()
 
         # stat - like success ratio
@@ -264,22 +161,11 @@ class PredatorCaptureEnv(gym.Env):
     def _get_cordinates(self):
         idx = np.random.choice(np.prod(self.dims), (self.npredator + self.npredator_capture + self.nprey),
                                replace=False)
-        # if self.args.eval:
-        #     with open('/home/rohanpaleja/PycharmProjects/HetGAT_MARL_Communication/test/IC3Net/initial_starts_for_test_time.txt', 'r') as my_file:
-        #         new_idx = my_file.read()
-        #         import ast
-        #         idx = ast.literal_eval(new_idx.split('\n')[self.episode_eval_counter])
-        #         idx = np.array(idx)
-        #     self.episode_eval_counter += 1
         return np.vstack(np.unravel_index(idx, self.dims)).T
 
     def _set_grid(self):
         self.grid = np.arange(self.BASE).reshape(self.dims)
-        # Mark agents in grid
-        # self.grid[self.predator_loc[:,0], self.predator_loc[:,1]] = self.predator_ids
-        # self.grid[self.prey_loc[:,0], self.prey_loc[:,1]] = self.prey_ids
 
-        # Padding for vision
         self.grid = np.pad(self.grid, self.vision, 'constant', constant_values=self.OUTSIDE_CLASS)
 
         self.empty_bool_base_grid = self._onehot_initialization(self.grid)
@@ -334,14 +220,6 @@ class PredatorCaptureEnv(gym.Env):
         return obs
 
     def _get_tensor_obs(self):
-        """
-        Notes: axis is initialized from the top corner. For example, (1,0) (one down, 0 right) refers to
-        array([[0., 0., 0., 0., 0.],
-               [1., 0., 0., 0., 0.],
-               [0., 0., 0., 0., 0.],
-               [0., 0., 0., 0., 0.],
-               [0., 0., 0., 0., 0.]])
-        """
         true_feature_map = self.true_feature_map.copy()
 
         for i in ['predator', 'predator_capture', 'prey', 'self']:
@@ -394,21 +272,11 @@ class PredatorCaptureEnv(gym.Env):
 
             agent_counter += 1
             obs.append(sub_obs)
-
-        # 29 are concatenation of one-hot vectors including the information for the prey and predator, and also the position information of the grid
-        # 10:14
-        # There is also one indicating if this grid is a result of padding. There can be paddings at the edge of the grids when vision >= 1
         for p in self.predator_capture_loc:
             sub_obs = self.feature_map.copy()
             sub_obs[1] = true_feature_map[:, :, 3 + agent_counter]
             agent_counter += 1
             obs.append(sub_obs)
-
-        # if self.enemy_comm:
-        #     for p in self.prey_loc:
-        #         slice_y = slice(p[0], p[0] + (2 * self.vision) + 1)
-        #         slice_x = slice(p[1], p[1] + (2 * self.vision) + 1)
-        #         obs.append(self.bool_base_grid[slice_y, slice_x])
 
         obs = np.stack(obs)
 
@@ -552,16 +420,7 @@ class PredatorCaptureEnv(gym.Env):
 
         if np.all(self.reached_prey == 1) and np.all(self.captured_prey == 1) and self.mode == 'mixed':
             self.episode_over = True
-            # print('success episode!!!')
 
-        # # Prey reward
-        # if nb_predator_on_prey == 0:
-        #     reward[self.npredator:] = self.TIMESTEP_PENALTY
-        # else:
-        #     # TODO: discuss & finalise
-        #     reward[self.npredator:] = 0
-
-        # Success ratio
         if self.mode != 'competitive':
             if nb_predator_on_prey == self.npredator+self.npredator_capture and self.episode_over:
                 self.stat['success'] = 1

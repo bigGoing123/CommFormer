@@ -13,7 +13,7 @@ from commformer.envs.ic3net_envs.predator_capture_env import PredatorCaptureEnv
 from commformer.envs.ic3net_envs.predator_prey_env import PredatorPreyEnv
 from commformer.runner.shared.pp_runner import PPRunner as Runner
 from commformer.envs.env_wrappers import SubprocVecEnv, DummyVecEnv
-
+from commformer.envs.ic3net_envs.cooperative_navigation_env import CN_Env
 """Train script for PP."""
 
 def make_train_env(all_args):
@@ -23,6 +23,8 @@ def make_train_env(all_args):
                 env = PredatorPreyEnv(all_args)
             elif all_args.env_name == "PCP":
                 env = PredatorCaptureEnv(all_args)
+            elif all_args.env_name == "CN":
+                env = CN_Env(all_args)
             else:
                 print("Can not support the " +
                       all_args.env_name + "environment.")
@@ -43,6 +45,8 @@ def make_eval_env(all_args):
                 env = PredatorPreyEnv(all_args)
             elif all_args.env_name == "PCP":
                 env = PredatorCaptureEnv(all_args)
+            elif all_args.env_name == "CN":
+                env = CN_Env(all_args)
             else:
                 print("Can not support the " +
                       all_args.env_name + "environment.")
@@ -58,53 +62,35 @@ def make_eval_env(all_args):
 
 def parse_args(args, parser):
     parser.add_argument('--scenario_name', type=str,
-                        default='PP', help="Which scenario to run on")
-    parser.add_argument('--num_agents', type=int, default=15,
+                        default='CN', help="Which scenario to run on")
+    parser.add_argument('--num_agents', type=int, default=5,
                     help="Number of agents (used in multiagent)")
-    parser.add_argument('--nenemies', type=int, default=7,
-                         help="Total number of preys in play")
+    parser.add_argument('--max_steps', type=int, default=100,
+                    help="Max steps in an episode")
     parser.add_argument('--dim', type=int, default=5,
                         help="Dimension of box")
     parser.add_argument('--vision', type=int, default=1,
                         help="Vision of predator")
-    parser.add_argument('--moving_prey', action="store_true", default=False,
-                        help="Whether prey is fixed or moving")
     parser.add_argument('--no_stay', action="store_true", default=False,
                         help="Whether predators have an action to stay in place")
-    parser.add_argument('--mode', default='mixed', type=str,
+    parser.add_argument('--mode', default='cooperative', type=str,
                     help='cooperative|competitive|mixed (default: mixed)')
-    parser.add_argument('--enemy_comm', action="store_true", default=False,
-                        help="Whether prey can communicate.")
-    parser.add_argument('--nfriendly_P', type=int, default=2,
-                        help="Total number of friendly perception agents in play")
-    parser.add_argument('--nfriendly_A', type=int, default=1,
-                        help="Total number of friendly action agents in play")
     parser.add_argument('--tensor_obs', action="store_true", default=False,
                         help="Do you want a tensor observation")
     parser.add_argument('--second_reward_scheme', action="store_true", default=False,
                         help="Do you want a partial reward for capturing and partial for getting to it?")
     parser.add_argument('--A_vision', type=int, default=-1,
                         help="Vision of A agents. If -1, defaults to blind")
-    parser.add_argument('--eval_episode_length', type=int, default=20)
+    parser.add_argument('--eval_episode_length', type=int, default=50)
 
     all_args = parser.parse_known_args(args)[0]
-    all_args.nfriendly = all_args.nfriendly_P + all_args.nfriendly_A
-    all_args.num_agents = all_args.nfriendly
-    all_args.npredator = all_args.num_agents
-
-    # Enemy comm
-    if hasattr(all_args, 'enemy_comm') and all_args.enemy_comm:
-        if hasattr(all_args, 'nenemies'):
-            all_args.num_agents += all_args.nenemies
-        else:
-            raise RuntimeError("parser. needs to pass argument 'nenemy'.")
-
     return all_args
 
 
 def main(args):
     parser = get_config()
     all_args = parse_args(args, parser)
+    print("args:",all_args)
 
     if "dec" in all_args.algorithm_name:
         all_args.dec_actor = True

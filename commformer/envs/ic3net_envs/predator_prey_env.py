@@ -26,62 +26,27 @@ import gym
 import numpy as np
 from gym import spaces
 
-
+# import curses
 class PredatorPreyEnv(gym.Env):
     # metadata = {'render.modes': ['human']}
 
     def __init__(self, args):
-        self.__version__ = "0.0.1"
+        self.__version__ = "0.0.1"  # 设置环境的版本号
 
         # TODO: better config handling
-        self.OUTSIDE_CLASS = 1
-        self.PREY_CLASS = 2
-        self.PREDATOR_CLASS = 3
-        self.TIMESTEP_PENALTY = -0.05
-        self.PREY_REWARD = 0
-        self.POS_PREY_REWARD = 0.05
-        self.episode_over = False
+        self.OUTSIDE_CLASS = 1  # 外部类的标识
+        self.PREY_CLASS = 2  # 猎物类的标识
+        self.PREDATOR_CLASS = 3  # 捕食者类的标识
+        self.TIMESTEP_PENALTY = -0.05  # 时间步惩罚
+        self.PREY_REWARD = 0  # 猎物奖励
+        self.POS_PREY_REWARD = 0.05  # 捕食者在猎物位置的奖励
+        self.episode_over = False  
 
-        self.args = args
+        self.args = args  # 保存传入的参数
 
+        # self.init_curses()
         self.multi_agent_init(self.args)
 
-
-    # def init_curses(self):
-    #     self.stdscr = curses.initscr()
-    #     curses.start_color()
-    #     curses.use_default_colors()
-    #     curses.init_pair(1, curses.COLOR_RED, -1)
-    #     curses.init_pair(2, curses.COLOR_YELLOW, -1)
-    #     curses.init_pair(3, curses.COLOR_CYAN, -1)
-    #     curses.init_pair(4, curses.COLOR_GREEN, -1)
-
-    # def init_args(self, parser):
-    #     env = parser.add_argument_group('Prey Predator task')
-    #     env.add_argument('--nenemies', type=int, default=1,
-    #                      help="Total number of preys in play")
-    #     env.add_argument('--dim', type=int, default=5,
-    #                      help="Dimension of box")
-    #     env.add_argument('--vision', type=int, default=2,
-    #                      help="Vision of predator")
-    #     env.add_argument('--moving_prey', action="store_true", default=False,
-    #                      help="Whether prey is fixed or moving")
-    #     env.add_argument('--no_stay', action="store_true", default=False,
-    #                      help="Whether predators have an action to stay in place")
-    #     parser.add_argument('--mode', default='mixed', type=str,
-    #                     help='cooperative|competitive|mixed (default: mixed)')
-    #     env.add_argument('--enemy_comm', action="store_true", default=False,
-    #                      help="Whether prey can communicate.")
-    #     env.add_argument('--nfriendly_P', type=int, default=2,
-    #                         help="Total number of friendly perception agents in play")
-    #     env.add_argument('--nfriendly_A', type=int, default=1,
-    #                         help="Total number of friendly action agents in play")
-    #     env.add_argument('--tensor_obs', action="store_true", default=False,
-    #                      help="Do you want a tensor observation")
-    #     env.add_argument('--second_reward_scheme', action="store_true", default=False,
-    #                      help="Do you want a partial reward for capturing and partial for getting to it?")
-    #     env.add_argument('--A_vision', type=int, default=-1,
-    #                         help="Vision of A agents. If -1, defaults to blind")
 
     def multi_agent_init(self, args):
 
@@ -100,21 +65,17 @@ class PredatorPreyEnv(gym.Env):
             raise NotImplementedError
             # TODO
 
-        # (0: UP, 1: RIGHT, 2: DOWN, 3: LEFT, 4: STAY)
-        # Define what an agent can do -
-        if self.stay:
+        if self.stay: #如果允许保持不动，动作数量为 5
             self.naction = 5
         else:
             self.naction = 4
 
-        self.BASE = (dims[0] * dims[1])
-        self.OUTSIDE_CLASS += self.BASE
-        self.PREY_CLASS += self.BASE
-        self.PREDATOR_CLASS += self.BASE
+        self.BASE = (dims[0] * dims[1])# 基础维度
+        self.OUTSIDE_CLASS += self.BASE  # 更新外部类的标识
+        self.PREY_CLASS += self.BASE  # 更新猎物类的标识
+        self.PREDATOR_CLASS += self.BASE  # 更新捕食者类的标识
 
-        # Setting max vocab size for 1-hot encoding
         self.vocab_size = 1 + 1 + self.BASE + 1 + 1
-        #          predator + prey + grid + outside
         agents = self.npredator
         if self.enemy_comm:
             agents += self.nprey
@@ -129,9 +90,6 @@ class PredatorPreyEnv(gym.Env):
         for agent in range(agents):
             self.action_space.append(spaces.Discrete(self.naction))
 
-            # Observation for each agent will be vision * vision ndarray
-            # self.observation_space.append(spaces.Box(low=0, high=1, shape=self.vocab_size * ((2 * self.vision) + 1) * ((2 * self.vision) + 1), dtype=int))
-            # Actual observation will be of the shape 1 * npredator * (2v+1) * (2v+1) * vocab_size
         self.observation_space = [spaces.Box(low=0, high=1, shape=(tmp_obs[n].shape[0], ), dtype=np.float32)
                                   for n in range(self.n_agents)]
         share_obs_dim = tmp_obs[0].shape[0] * self.n_agents
@@ -175,13 +133,6 @@ class PredatorPreyEnv(gym.Env):
         return self.obs, self._get_reward(), [self.episode_over for _ in range(self.n_agents)], [debug for _ in range(self.n_agents)]
 
     def reset(self):
-        """
-        Reset the state of the environment and returns an initial observation.
-
-        Returns
-        -------
-        observation (object): the initial observation of the space.
-        """
         self.episode_over = False
         self.reached_prey = np.zeros(self.npredator)
 
@@ -239,7 +190,6 @@ class PredatorPreyEnv(gym.Env):
                 slice_y = slice(p[0], p[0] + (2 * self.vision) + 1)
                 slice_x = slice(p[1], p[1] + (2 * self.vision) + 1)
                 obs.append(self.bool_base_grid[slice_y, slice_x].flatten())
-
         obs = np.stack(obs)
         return obs
 
@@ -348,7 +298,7 @@ class PredatorPreyEnv(gym.Env):
         grid.insert(axis, idx)
         return tuple(grid)
 
-    def render(self, mode='human', close=False):
+    def render(self, mode='rgb_array', close=False):
         grid = np.zeros(self.BASE, dtype=object).reshape(self.dims)
         self.stdscr.clear()
 

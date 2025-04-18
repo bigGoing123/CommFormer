@@ -118,6 +118,7 @@ class MATTrainer:
         active_masks_batch = check(active_masks_batch).to(**self.tpdv)
 
         # Reshape to do in a single forward pass for all steps
+        #主要调用encoder的前向计算
         values, action_log_probs, dist_entropy = self.policy.evaluate_actions(share_obs_batch,
                             obs_batch, 
                             rnn_states_batch, 
@@ -128,12 +129,13 @@ class MATTrainer:
                             active_masks_batch,
                             steps,
                             total_step,)
-        # actor update
+        # actor update，重要性采样权重
         imp_weights = torch.exp(action_log_probs - old_action_log_probs_batch)
 
         surr1 = imp_weights * adv_targ
         surr2 = torch.clamp(imp_weights, 1.0 - self.clip_param, 1.0 + self.clip_param) * adv_targ
 
+        #PPO clip的策略损失
         if self._use_policy_active_masks:
             policy_loss = (-torch.sum(torch.min(surr1, surr2),
                                       dim=-1,
