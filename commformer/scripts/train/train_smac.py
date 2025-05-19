@@ -15,7 +15,6 @@ from commformer.envs.starcraft2.starcraft import StarCraft2Env as StarCraft2Comm
 from commformer.envs.starcraft2.Random_StarCraft2_Env import RandomStarCraft2Env
 from commformer.envs.starcraft2.smac_maps import get_map_params
 from commformer.envs.env_wrappers import ShareSubprocVecEnv, ShareDummyVecEnv
-from commformer.runner.shared.smac_runner import SMACRunner as Runner
 
 """Train script for SMAC."""
 
@@ -155,9 +154,15 @@ def main(args):
         "device": device,
         "run_dir": run_dir
     }
-
+    if all_args.share_policy:
+        from commformer.runner.shared.smac_runner import SMACRunner as Runner
+    else:
+        from commformer.runner.separated.smac_runner import SMACRunner as Runner
     runner = Runner(config)
-    runner.run()
+    if all_args.use_eval:
+        runner.eval(1)
+    else:
+        runner.run()
 
     # post process
     envs.close()

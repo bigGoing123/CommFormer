@@ -1,0 +1,2 @@
+列出地图
+python -m smac.bin.map_list
