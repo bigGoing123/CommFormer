@@ -347,7 +347,7 @@ class Encoder(nn.Module):
         self.obs_dim = obs_dim
         self.n_embd = n_embd
         self.n_agent = n_agent
-        self.encode_state = encode_state
+        self.encode_state = encode_state 
 
         # 状态和观察的编码器
         self.state_encoder = nn.Sequential(nn.LayerNorm(state_dim),
