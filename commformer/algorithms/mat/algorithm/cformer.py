@@ -19,10 +19,12 @@ from commformer.algorithms.utils.transformer_act import continuous_parallel_act
 # ​​更新后的智能体表示​​：x（含高阶交互信息）
 # ​​注意力权重​​（可选）：用于可视化或分析通信结构
 class GraphTransformerLayer(nn.Module):
-    def __init__(self, embed_dim, ff_embed_dim, num_heads, n_agent, self_loop_add, dropout=0.1, weights_dropout=False, masked=False):
+    def __init__(self, embed_dim, ff_embed_dim, num_heads, n_agent, self_loop_add, dropout=0.1, weights_dropout=False,
+                 masked=False):
         super(GraphTransformerLayer, self).__init__()
         # 初始化自注意力层
-        self.self_attn = RelationMultiheadAttention(embed_dim, num_heads, n_agent, dropout, weights_dropout, masked, self_loop_add)
+        self.self_attn = RelationMultiheadAttention(embed_dim, num_heads, n_agent, dropout, weights_dropout, masked,
+                                                    self_loop_add)
         # 前馈网络的两个线性层（使用Conv1D实现）
         self.fc1 = Conv1D(ff_embed_dim, embed_dim)
         self.fc2 = Conv1D(embed_dim, ff_embed_dim)
@@ -62,13 +64,15 @@ class GraphTransformerLayer(nn.Module):
         x = self.ff_layer_norm(residual + x)  # 残差连接+层归一化
         return x, self_attn
 
+
 # 关系增强的多头注意力机制
 # 输入：接收智能体观测向量(o^1, o^2, ..., o^n)和关系嵌入r_{i→j}
 # ​​输出​​：
 # ​​加权值向量​​：attn = weighted sum of value vectors
 # ​​注意力权重矩阵​​：attn_weights（反映通信图边的重要性）
 class RelationMultiheadAttention(nn.Module):
-    def __init__(self, embed_dim, num_heads, n_agent, dropout=0., weights_dropout=False, masked=False, self_loop_add=True):
+    def __init__(self, embed_dim, num_heads, n_agent, dropout=0., weights_dropout=False, masked=False,
+                 self_loop_add=True):
         super(RelationMultiheadAttention, self).__init__()
         # 参数初始化
         self.embed_dim = embed_dim  # 输入维度
@@ -76,7 +80,7 @@ class RelationMultiheadAttention(nn.Module):
         self.dropout = dropout
         self.head_dim = embed_dim // num_heads  # 每个头的维度
         assert self.head_dim * num_heads == self.embed_dim, "embed_dim必须能被num_heads整除"
-        self.scaling = self.head_dim**-0.5  # 缩放因子
+        self.scaling = self.head_dim ** -0.5  # 缩放因子
         self.masked = masked  # 是否使用掩码
         self.self_loop_add = self_loop_add  # 是否添加自环
 
@@ -116,7 +120,7 @@ class RelationMultiheadAttention(nn.Module):
         if qkv_same:
             q, k, v = self.in_proj_qkv(query)  # 自注意力
         elif kv_same:
-            q = self.in_proj_q(query)          # 编码器-解码器注意力
+            q = self.in_proj_q(query)  # 编码器-解码器注意力
             k, v = self.in_proj_kv(key)
         else:
             q = self.in_proj_q(query)
@@ -156,7 +160,7 @@ class RelationMultiheadAttention(nn.Module):
 
         # 解码器智能体处理（添加自环）
         if dec_agent is True:
-            self_loop = torch.eye(tgt_len).unsqueeze(-1).long().to(device=attn_weights.device) #确保每个节点能关注到自身
+            self_loop = torch.eye(tgt_len).unsqueeze(-1).long().to(device=attn_weights.device)  # 确保每个节点能关注到自身
             if self.self_loop_add:
                 attn_mask = attn_mask + self_loop  # 自环权重叠加
             else:
@@ -212,6 +216,7 @@ class RelationMultiheadAttention(nn.Module):
         weight = self.in_proj_weight[start:end, :]
         bias = self.in_proj_bias[start:end] if self.in_proj_bias is not None else None
         return F.linear(input, weight, bias)
+
 
 class GELU(nn.Module):
     def __init__(self):
@@ -272,6 +277,7 @@ class SelfAttention(nn.Module):
         y = self.proj(y)
         return y
 
+
 # 编码器块（包含自注意力和前馈网络）
 class EncodeBlock(nn.Module):
     def __init__(self, n_embd, n_head, n_agent):
@@ -294,6 +300,7 @@ class EncodeBlock(nn.Module):
         # 前馈网络残差连接
         x = self.ln2(x + self.mlp(x))
         return x
+
 
 # 解码器块（包含关系增强的多头注意力和交叉注意力）
 class DecodeBlock(nn.Module):
@@ -337,7 +344,8 @@ class DecodeBlock(nn.Module):
 
         # 前馈网络
         x = self.ln3(x + self.mlp(x))
-        return x #通过自回归的方式逐步生成动作
+        return x  # 通过自回归的方式逐步生成动作
+
 
 # 编码器（处理状态和观察）
 class Encoder(nn.Module):
@@ -347,7 +355,7 @@ class Encoder(nn.Module):
         self.obs_dim = obs_dim
         self.n_embd = n_embd
         self.n_agent = n_agent
-        self.encode_state = encode_state 
+        self.encode_state = encode_state
 
         # 状态和观察的编码器
         self.state_encoder = nn.Sequential(nn.LayerNorm(state_dim),
@@ -356,7 +364,7 @@ class Encoder(nn.Module):
                                          init_(nn.Linear(obs_dim, n_embd), activate=True), nn.GELU())
         # Transformer层堆叠
         self.ln = nn.LayerNorm(n_embd)
-        self.blocks = nn.ModuleList([GraphTransformerLayer(n_embd, n_embd, n_head, n_agent, self_loop_add=self_loop_add) 
+        self.blocks = nn.ModuleList([GraphTransformerLayer(n_embd, n_embd, n_head, n_agent, self_loop_add=self_loop_add)
                                      for _ in range(n_block)])
         # 输出头
         self.head = nn.Sequential(init_(nn.Linear(n_embd, n_embd), activate=True), nn.GELU(), nn.LayerNorm(n_embd),
@@ -382,6 +390,7 @@ class Encoder(nn.Module):
         v_loc = self.head(rep)
         return v_loc, rep
 
+
 # 解码器（生成动作）
 class Decoder(nn.Module):
     def __init__(self, obs_dim, action_dim, n_block, n_embd, n_head, n_agent,
@@ -403,11 +412,12 @@ class Decoder(nn.Module):
             self.log_std = torch.nn.Parameter(log_std)
         # 观察编码器
         self.obs_encoder = nn.Sequential(nn.LayerNorm(obs_dim),
-                                        init_(nn.Linear(obs_dim, n_embd), activate=True), nn.GELU())
+                                         init_(nn.Linear(obs_dim, n_embd), activate=True), nn.GELU())
         # Transformer块
         self.ln = nn.LayerNorm(n_embd)
-        self.blocks = nn.Sequential(*[DecodeBlock(n_embd, n_head, n_agent, self_loop_add=self_loop_add) for _ in range(n_block)])
-        
+        self.blocks = nn.Sequential(
+            *[DecodeBlock(n_embd, n_head, n_agent, self_loop_add=self_loop_add) for _ in range(n_block)])
+
         # 输出头（共享或独立）
         if self.dec_actor:
             if self.share_actor:
@@ -448,21 +458,25 @@ class Decoder(nn.Module):
             logit = self.head(x)
         return logit
 
+
+from commformer.utils.cluster import cluster_agents, build_lf_adj
+
+
 class CommFormer(nn.Module):
 
-        # ​​核心参数​​：
-        # sparsity=0.4：通信图稀疏度，保留40%的连接
-        # n_block=3：Transformer模块堆叠层数
-        # n_embd=64：嵌入维度
-        # action_type：支持离散/连续动作空间
-        # dec_actor：是否使用分散式策略网络
-        # ​​训练控制​​：
-        # warmup=10：初始阶段使用全连接通信
-        # post_stable：后期稳定阶段冻结通信图
-        # post_ratio=0.5：50%训练步数后进入稳定期
+    # ​​核心参数​​：
+    # sparsity=0.4：通信图稀疏度，保留40%的连接
+    # n_block=3：Transformer模块堆叠层数
+    # n_embd=64：嵌入维度
+    # action_type：支持离散/连续动作空间
+    # dec_actor：是否使用分散式策略网络
+    # ​​训练控制​​：
+    # warmup=10：初始阶段使用全连接通信
+    # post_stable：后期稳定阶段冻结通信图
+    # post_ratio=0.5：50%训练步数后进入稳定期
     def __init__(self, state_dim, obs_dim, action_dim, n_agent,
                  n_block, n_embd, n_head, encode_state=False, device=torch.device("cpu"),
-                 action_type='Discrete', dec_actor=False, share_actor=False, sparsity=0.4, 
+                 action_type='Discrete', dec_actor=False, share_actor=False, sparsity=0.4,
                  warmup=10, post_stable=False, post_ratio=0.5, self_loop_add=True,
                  no_relation_enhanced=False):
         super(CommFormer, self).__init__()
@@ -481,8 +495,8 @@ class CommFormer(nn.Module):
         self.decoder = Decoder(obs_dim, action_dim, n_block, n_embd, n_head, n_agent,
                                self.action_type, dec_actor=dec_actor, share_actor=share_actor,
                                self_loop_add=self_loop_add)
-#        edges：n_agent×n_agent的可训练矩阵，初始为全连接
-#        edges_embed：将二元通信关系(0/1)映射到嵌入空间
+        #        edges：n_agent×n_agent的可训练矩阵，初始为全连接
+        #        edges_embed：将二元通信关系(0/1)映射到嵌入空间
         self.edges = nn.Parameter(torch.ones(n_agent, n_agent), requires_grad=True)
         self.edges_embed = nn.Embedding(2, n_embd)
 
@@ -499,7 +513,8 @@ class CommFormer(nn.Module):
     def zero_std(self):
         if self.action_type != 'Discrete':
             self.decoder.zero_std(self.device)
-    #更新策略​​：
+
+    # 更新策略​​：
     # 内层优化：固定通信图，更新策略网络参数
     # 外层优化：固定策略网络，更新通信图参数
     def model_parameters(self):
@@ -507,152 +522,107 @@ class CommFormer(nn.Module):
         return parameters
 
     def edge_parameters(self):
-        parameters = [p for name, p in self.named_parameters() if name == "edges"]
-        return parameters
+        # parameters = [p for name, p in self.named_parameters() if name == "edges"]
+        return []
 
     def edge_return(self, exact=False, topk=-1):
         # ​​训练阶段​​：可微采样（Straight-Through Estimator）
         # ​​推理阶段​​：取topk确定连接
-        edges = self.edges
-        if exact is False:
-            relations = gumbel_softmax_topk(edges, topk=self.topk, hard=True, dim=-1)
-        else:
-            y_soft = edges.softmax(dim=-1)
-            index = edges.topk(k=self.topk, dim=-1)[1]
-            relations = torch.zeros_like(edges, memory_format=torch.legacy_contiguous_format).scatter_(-1, index, 1.0)
-            relations = relations - y_soft.detach() + y_soft
-        
-        if topk != -1:
-            y_soft = edges.softmax(dim=-1)
-            index = edges.topk(k=topk, dim=-1)[1]
-            relations = torch.zeros_like(edges, memory_format=torch.legacy_contiguous_format).scatter_(-1, index, 1.0)
-            relations = relations - y_soft.detach() + y_soft
-
-        return relations
+        with torch.no_grad():
+            obs_cpu = self.latest_obs[0].detach().cpu().numpy()
+            labels, leaders = cluster_agents(obs_cpu, eps=5.0, min_samples=2)
+            adj = build_lf_adj(self.n_agent, labels, leaders, self.device)
+        return adj
 
     def forward(self, state, obs, action, available_actions=None, steps=0, total_step=0):
-        # state: (batch, n_agent, state_dim)
-        # obs: (batch, n_agent, obs_dim)
-        # action: (batch, n_agent, 1)
-        # available_actions: (batch, n_agent, act_dim)
-
-        # state unused
-        ori_shape = np.shape(state)
-        state = np.zeros((*ori_shape[:-1], 37), dtype=np.float32)
-
-        state = check(state).to(**self.tpdv)
+        state = check(np.zeros((*np.shape(state)[:-1], 37), dtype=np.float32)).to(**self.tpdv)
         obs = check(obs).to(**self.tpdv)
         action = check(action).to(**self.tpdv)
-
         if available_actions is not None:
             available_actions = check(available_actions).to(**self.tpdv)
 
-        batch_size = np.shape(state)[0]
-        #生成通信图
-        if steps > self.warmup:
-            # top_k
-            relations = self.edge_return()
-        else:
-            relations = self.edges
-        
-        # improve the training stability
-        if steps > int(self.post_ratio * total_step) and self.post_stable:
-            relations = self.edge_return(exact=True)
+        batch_size = obs.shape[0]
+        self.latest_obs = obs.detach()  # 缓存当前 obs 供 edge_return 使用
 
-        relations = relations.unsqueeze(0)
-        # 关系嵌入生成
-        relations_embed = self.edges_embed(relations.long()) 
-        relations_embed = relations_embed.repeat(batch_size, 1, 1, 1) # 1 x n x n x emd
+        relations = self.edge_return()
+        relations = relations.unsqueeze(0).repeat(batch_size, 1, 1)
 
-        if self.dec_actor:
-            dec_agent = True
-        else:
-            dec_agent = False
-
-        if self.no_relation_enhanced is True:
+        if self.no_relation_enhanced:
             relations_embed = None
-            
-        # 编码器处理
+        else:
+            relations_embed = relations.unsqueeze(-1).repeat(1, 1, 1, self.embed_dim)
+
+        dec_agent = self.dec_actor
+
         v_loc, obs_rep = self.encoder(state, obs, relations_embed, attn_mask=relations, dec_agent=dec_agent)
+
         if self.action_type == 'Discrete':
             action = action.long()
-            #解码器处理
-            action_log, entropy = discrete_parallel_act(self.decoder, obs_rep, obs, action, relations_embed, relations, batch_size,
-                                                        self.n_agent, self.action_dim, self.tpdv, available_actions, dec_agent=dec_agent)
+            action_log, entropy = discrete_parallel_act(
+                self.decoder, obs_rep, obs, action, relations_embed, relations, batch_size,
+                self.n_agent, self.action_dim, self.tpdv, available_actions, dec_agent=dec_agent)
         else:
-            action_log, entropy = continuous_parallel_act(self.decoder, obs_rep, obs, action, relations_embed, relations, batch_size,
-                                                          self.n_agent, self.action_dim, self.tpdv, dec_agent=dec_agent)
+            action_log, entropy = continuous_parallel_act(
+                self.decoder, obs_rep, obs, action, relations_embed, relations, batch_size,
+                self.n_agent, self.action_dim, self.tpdv, dec_agent=dec_agent)
 
         return action_log, v_loc, entropy
 
     def get_actions(self, state, obs, available_actions=None, deterministic=False):
-        # state unused
-        ori_shape = np.shape(obs)
-        state = np.zeros((*ori_shape[:-1], 37), dtype=np.float32)
-
-        state = check(state).to(**self.tpdv)
+        state = check(np.zeros((*np.shape(obs)[:-1], 37), dtype=np.float32)).to(**self.tpdv)
         obs = check(obs).to(**self.tpdv)
         if available_actions is not None:
             available_actions = check(available_actions).to(**self.tpdv)
 
-        batch_size = np.shape(obs)[0]
+        batch_size = obs.shape[0]
+        self.latest_obs = obs.detach()
 
-        relations = self.edge_return(exact=True)
+        relations = self.edge_return()
+        relations = relations.unsqueeze(0).repeat(batch_size, 1, 1)
 
-        relations = relations.unsqueeze(0)
-        relations_embed = self.edges_embed(relations.long()) # 1 x n x n x emd
-        relations_embed = relations_embed.repeat(batch_size, 1, 1, 1)
-
-        if self.dec_actor:
-            dec_agent=True
-        else:
-            dec_agent=False 
-        
-        if self.no_relation_enhanced is True:
+        if self.no_relation_enhanced:
             relations_embed = None
-        
+        else:
+            relations_embed = relations.unsqueeze(-1).repeat(1, 1, 1, self.embed_dim)
+
+        dec_agent = self.dec_actor
+
         v_loc, obs_rep = self.encoder(state, obs, relations_embed, attn_mask=relations, dec_agent=dec_agent)
 
         if self.action_type == "Discrete":
-            output_action, output_action_log = discrete_autoregreesive_act(self.decoder, obs_rep, obs, relations_embed, relations, batch_size,
-                                                                           self.n_agent, self.action_dim, self.tpdv,
-                                                                           available_actions, deterministic, dec_agent=dec_agent)
+            output_action, output_action_log = discrete_autoregreesive_act(
+                self.decoder, obs_rep, obs, relations_embed, relations, batch_size,
+                self.n_agent, self.action_dim, self.tpdv, available_actions, deterministic, dec_agent=dec_agent)
         else:
-            output_action, output_action_log = continuous_autoregreesive_act(self.decoder, obs_rep, obs, relations_embed, relations, batch_size,
-                                                                             self.n_agent, self.action_dim, self.tpdv,
-                                                                             deterministic, dec_agent=dec_agent)
+            output_action, output_action_log = continuous_autoregreesive_act(
+                self.decoder, obs_rep, obs, relations_embed, relations, batch_size,
+                self.n_agent, self.action_dim, self.tpdv, deterministic, dec_agent=dec_agent)
 
         return output_action, output_action_log, v_loc
 
     def get_values(self, state, obs, available_actions=None):
-        # state unused
-        ori_shape = np.shape(state)
-        state = np.zeros((*ori_shape[:-1], 37), dtype=np.float32)
-
-        state = check(state).to(**self.tpdv)
+        state = check(np.zeros((*np.shape(state)[:-1], 37), dtype=np.float32)).to(**self.tpdv)
         obs = check(obs).to(**self.tpdv)
 
-        batch_size = np.shape(obs)[0]
+        batch_size = obs.shape[0]
+        self.latest_obs = obs.detach()
 
-        relations = self.edge_return(exact=True)
-        
-        relations = relations.unsqueeze(0)
-        relations_embed = self.edges_embed(relations.long()) # 1 x n x n x emd
-        relations_embed = relations_embed.repeat(batch_size, 1, 1, 1)
+        relations = self.edge_return()
+        relations = relations.unsqueeze(0).repeat(batch_size, 1, 1)
 
-        if self.dec_actor:
-            dec_agent=True
-        else:
-            dec_agent=False 
-        
-        if self.no_relation_enhanced is True:
+        if self.no_relation_enhanced:
             relations_embed = None
+        else:
+            relations_embed = relations.unsqueeze(-1).repeat(1, 1, 1, self.embed_dim)
+
+        dec_agent = self.dec_actor
 
         v_tot, obs_rep = self.encoder(state, obs, relations_embed, attn_mask=relations, dec_agent=dec_agent)
         return v_tot
 
-def gumbel_softmax_topk(logits, topk=1, tau=1, hard=False, dim=-1):
 
+
+def gumbel_softmax_topk(logits, topk=1, tau=1, hard=False, dim=-1):
     gumbels = (
         -torch.empty_like(logits, memory_format=torch.legacy_contiguous_format).exponential_().log()
     )  # ~Gumbel(0,1)
