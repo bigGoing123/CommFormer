@@ -42,7 +42,7 @@ class TransformerPolicy:
         print("obs_dim: ", self.obs_dim)
         print("share_obs_dim: ", self.share_obs_dim)
         print("act_dim: ", self.act_dim)
-
+        print("comm_mode: ", args.comm_mode)
         self.num_agents = num_agents
         self.tpdv = dict(dtype=torch.float32, device=device)
 
@@ -51,7 +51,7 @@ class TransformerPolicy:
             from commformer.algorithms.mat.algorithm.cformer import CommFormer as MAT
         else:
             raise NotImplementedError
-
+        
         self.transformer = MAT(self.share_obs_dim, self.obs_dim, self.act_dim, num_agents,
                                n_block=args.n_block, n_embd=args.n_embd, n_head=args.n_head,
                                encode_state=args.encode_state, device=device,
@@ -59,7 +59,7 @@ class TransformerPolicy:
                                share_actor=args.share_actor, sparsity=args.sparsity, 
                                warmup=args.warmup, post_stable=args.post_stable,
                                post_ratio=args.post_ratio, self_loop_add=args.self_loop_add,
-                               no_relation_enhanced=args.no_relation_enhanced,)
+                               no_relation_enhanced=args.no_relation_enhanced,comm_mode=args.comm_mode)
         if args.env_name == "hands":
             self.transformer.zero_std()
 
@@ -81,8 +81,13 @@ class TransformerPolicy:
         self.optimizer = torch.optim.Adam(self.transformer.model_parameters(),
                                           lr=self.lr, eps=self.opti_eps,
                                           weight_decay=self.weight_decay)
-        self.edge_optimizer = torch.optim.Adam(self.transformer.edge_parameters(),
-                                          lr=self.edge_lr)
+        if self.transformer.comm_mode == "com":
+            self.edge_optimizer = torch.optim.Adam(self.transformer.edge_parameters(),
+                                                lr=self.edge_lr)
+        elif self.transformer.comm_mode == "lf":
+            self.edge_optimizer = None
+        else:
+            raise ValueError(f"Unknown comm_mode: {self.transformer.comm_mode}")
 
     def lr_decay(self, episode, episodes):
         """

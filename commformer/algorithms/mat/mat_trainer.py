@@ -52,6 +52,8 @@ class MATTrainer:
         else:
             self.value_normalizer = None
 
+        # 假设policy初始化在外部传入时已包含comm_mode参数，如果需要在本文件初始化CommFormer，请在初始化时加上comm_mode=args.comm_mode
+
     def cal_value_loss(self, values, value_preds_batch, return_batch, active_masks_batch):
         """
         Calculate value function loss.
@@ -151,12 +153,13 @@ class MATTrainer:
         # self.policy.optimizer.zero_grad()
         if self._use_bilevel:
             if (index+1) % 5 == 0 and ((self._post_stable and steps <= int(self._post_ratio * total_step)) or not self._post_stable):
-                self.policy.edge_optimizer.zero_grad()
+                if self.policy.edge_optimizer is not None:
+                    self.policy.edge_optimizer.zero_grad()
             else:
                 self.policy.optimizer.zero_grad()
         else:
             self.policy.optimizer.zero_grad()
-            if (index+1) % 5 == 0:
+            if (index+1) % 5 == 0 and self.policy.edge_optimizer is not None:
                 self.policy.edge_optimizer.zero_grad()
         
         loss.backward()
@@ -168,7 +171,8 @@ class MATTrainer:
         
         if self._use_bilevel:
             if (index+1) % 5 == 0 and ((self._post_stable and steps <= int(self._post_ratio * total_step)) or not self._post_stable):
-                self.policy.edge_optimizer.step()
+                if self.policy.edge_optimizer is not None:
+                    self.policy.edge_optimizer.step()
             else:
                 self.policy.optimizer.step()
         else:

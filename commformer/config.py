@@ -157,4 +157,5 @@ def get_config():
     parser.add_argument("--self_loop_add", action='store_false', default=True)
     parser.add_argument("--alg_seed", type=int, default=1)
     parser.add_argument("--no_relation_enhanced", action='store_true', default=False)
+    parser.add_argument("--comm_mode", type=str, default="lf", choices=["lf", "com"], help="通信机制选择：leader-follower或gumbel-softmax采样")
     return parser

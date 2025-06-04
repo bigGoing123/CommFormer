@@ -117,12 +117,13 @@ def main(args):
                          entity=all_args.user_name,
                          notes=socket.gethostname(),
                          name=str(all_args.algorithm_name) + "_" +str(all_args.map_name)+"_"+
-                              str(all_args.experiment_name) +
+                              str(all_args.experiment_name) +"_"+str(all_args.comm_mode)+
                               "_seed" + str(all_args.seed),
                          group=all_args.map_name,
                          dir=str(run_dir),
                          job_type="training",
-                         reinit=True)
+                         reinit=True,
+                         settings=wandb.Settings(start_method="thread", mode="offline"))
     else:
         import time
         timestr = time.strftime("%y%m%d-%H%M%S")
