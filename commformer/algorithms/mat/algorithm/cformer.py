@@ -12,6 +12,7 @@ from commformer.algorithms.utils.transformer_act import discrete_autoregreesive_
 from commformer.algorithms.utils.transformer_act import discrete_parallel_act
 from commformer.algorithms.utils.transformer_act import continuous_autoregreesive_act
 from commformer.algorithms.utils.transformer_act import continuous_parallel_act
+from commformer.utils.cluster import cluster_agents, build_lf_adj
 
 
 # 图Transformer层，包含多头注意力和前馈网络
@@ -459,9 +460,6 @@ class Decoder(nn.Module):
         return logit
 
 
-from commformer.utils.cluster import cluster_agents, build_lf_adj
-
-
 class CommFormer(nn.Module):
 
     # ​​核心参数​​：
@@ -515,9 +513,6 @@ class CommFormer(nn.Module):
         if self.action_type != 'Discrete':
             self.decoder.zero_std(self.device)
 
-    # 更新策略​​：
-    # 内层优化：固定通信图，更新策略网络参数
-    # 外层优化：固定策略网络，更新通信图参数
     def model_parameters(self):
         parameters = [p for name, p in self.named_parameters() if name != "edges" ]
         return parameters

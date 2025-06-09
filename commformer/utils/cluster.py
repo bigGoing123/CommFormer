@@ -22,6 +22,8 @@ def cluster_agents(features, eps=5.0, min_samples=2):
 def build_lf_adj(n_agents, labels, leader_indices, device):
     adj = torch.zeros((n_agents, n_agents), device=device)
     for i in range(n_agents):
+        if labels[i] == -1 or len(leader_indices) == 0 or labels[i] >= len(leader_indices): # 跳过未分组的智能体，或没有leader的情况
+            continue
         leader = leader_indices[labels[i]]
         adj[i, leader] = 1.0
         adj[leader, i] = 1.0  # 双向通信，可修改

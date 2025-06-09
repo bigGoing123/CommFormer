@@ -90,7 +90,10 @@ class SMACRunner(Runner):
                 print(edges)
                 edges = _t2n(self.trainer.policy.transformer.edge_return(exact=True))
                 image = torch.from_numpy(edges).unsqueeze(0).unsqueeze(0)
-                self.writter.add_image('Matrix', image, dataformats='NCHW', global_step=total_num_steps)
+                if self.use_wandb:
+                    wandb.log({"Matrix": wandb.Image(image.squeeze().numpy())}, step=total_num_steps)
+                else:
+                    self.writter.add_image('Matrix', image, dataformats='NCHW', global_step=total_num_steps)
 
                 if self.use_wandb:
                     wandb.log({"incre_win_rate": incre_win_rate}, step=total_num_steps)
