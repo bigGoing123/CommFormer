@@ -20,6 +20,7 @@ commformer/scripts/train/train_pp.py
 commformer/scripts/train/train_smac.py
 commformer/scripts/train/utils.py
 commformer/utils/__init__.py
+commformer/utils/cluster.py
 commformer/utils/shared_buffer.py
 commformer/utils/util.py
 commformer/utils/valuenorm.py
