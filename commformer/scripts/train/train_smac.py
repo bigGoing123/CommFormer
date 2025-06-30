@@ -160,10 +160,7 @@ def main(args):
     else:
         from commformer.runner.separated.smac_runner import SMACRunner as Runner
     runner = Runner(config)
-    if all_args.use_eval:
-        runner.eval(1)
-    else:
-        runner.run()
+    runner.run()
 
     # post process
     envs.close()
