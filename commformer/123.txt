@@ -1,7 +1,7 @@
 conda activate wac_mat
 cd onpolicy/scripts/train_smac_scripts/
 
-查看内存情况：sudo systemctl status user-1010.slice
+查看内存情况：sudo systemctl status user-1005.slice
 查看相关进程和占用情况：ps -u wangchao -o pid,user,vsz,rss,command
 删除某些名称的进程：pkill -f "/work/sdim-lemons/wangchao/StarCraftII"
 pgrep -f "xxxx"
