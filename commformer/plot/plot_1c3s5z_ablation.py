@@ -12,15 +12,8 @@ groups = {
  'commformer_1c3s5z_single_lf_seed2 - incre_win_rate',
  'commformer_1c3s5z_single_lf_seed3 - incre_win_rate',
  ],
- 'MAPPO': [
- 'mappo_1c3s5z_10v10_seed1 - incre_win_rate',
-'mappo_1c3s5z_10v10_seed2 - incre_win_rate',
- 'mappo_1c3s5z_10v10_seed3 - incre_win_rate',
-],
- 'HAPPO': [
- 'happo_1c3s5z_10v10_seed1 - incre_win_rate',
-'happo_1c3s5z_10v10_seed2 - incre_win_rate',
- 'happo_1c3s5z_10v10_seed3 - incre_win_rate',
+ 'LF-Commer-FC': [
+ 'commformer_1c3s5z_single_lf_seed1_FC - incre_win_rate',
 ]
 }
 
@@ -64,30 +57,27 @@ fig, ax = plt.subplots()
 # 颜色自定义
 palette = {
     'LF-Commer': '#a0d3ff',
-    'MAPPO': '#ffb3de', 
-    'HAPPO': '#b39ddb',
+    'LF-Commer-FC': '#ffb3de', 
 }
 
-# 绘制均值曲线和置信区间 - 按指定顺序绘制
-algo_order = ['LF-Commer', 'HAPPO', 'MAPPO']
-for algo in algo_order:
-    if algo in df_stats['Algorithm'].unique():
-        sub = df_stats[df_stats['Algorithm'] == algo]
-        # 转换为numpy数组以避免兼容性问题
-        x = sub['Step'].to_numpy()
-        y = sub['mean_clipped'].to_numpy()
-        lower = sub['lower'].to_numpy()
-        upper = sub['upper'].to_numpy()
-        
-        ax.plot(x, y, label=algo, color=palette.get(algo, None))
-        ax.fill_between(x, lower, upper, alpha=0.2, color=palette.get(algo, None))
+# 绘制均值曲线和置信区间
+for algo in df_stats['Algorithm'].unique():
+    sub = df_stats[df_stats['Algorithm'] == algo]
+    # 转换为numpy数组以避免兼容性问题
+    x = sub['Step'].to_numpy()
+    y = sub['mean_clipped'].to_numpy()
+    lower = sub['lower'].to_numpy()
+    upper = sub['upper'].to_numpy()
+    
+    ax.plot(x, y, label=algo, color=palette.get(algo, None))
+    ax.fill_between(x, lower, upper, alpha=0.2, color=palette.get(algo, None))
 
 ax.set_xlabel('Step')
 ax.set_ylabel('Win Rate')
 ax.set_title('Win Rate Comparison')
-ax.legend(loc='upper left')  # 恢复自动图例，这样线条样式会正确显示
+ax.legend(loc='upper left')  # 将图例放在左上角
 plt.tight_layout()
 
 # 保存图片到同一级目录
-plt.savefig('./png/1c3s5z.png', dpi=300, bbox_inches='tight')
+plt.savefig('./png/1c3s5z_ablation.png', dpi=300, bbox_inches='tight')
 # plt.show()

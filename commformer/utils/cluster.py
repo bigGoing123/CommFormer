@@ -4,7 +4,7 @@ import torch
 import numpy as np
 from sklearn.cluster import DBSCAN
 
-def cluster_agents(features, eps=5.0, min_samples=2):
+def cluster_agents(features, eps=10.0, min_samples=10):
     clustering = DBSCAN(eps=eps, min_samples=min_samples).fit(features)
     labels = clustering.labels_
     n_clusters = max(labels) + 1
