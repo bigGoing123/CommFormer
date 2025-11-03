@@ -3,7 +3,7 @@ env="StarCraft2"
 map="2c_vs_64zg"
 algo="mat"
 exp="check"
-seed=2
+seed=3
 
 echo "env is ${env}, map is ${map}, algo is ${algo}, exp is ${exp}, running seed ${seed}"
     echo "seed is ${seed}:"
